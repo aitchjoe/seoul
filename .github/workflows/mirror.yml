@@ -1,0 +1,21 @@
+name: Mirror container image
+
+on: workflow_dispatch
+
+jobs:
+  mirror-image:
+
+    # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Mirror image
+        run: |
+          IMAGE_TAG=v1.8.0
+          SOURCE_IMAGE="gcr.io/kaniko-project/executor:$IMAGE_TAG"
+          TARGET_REGISTRY="ghcr.io"
+          TARGET_IMAGE="$TARGET_REGISTRY/$GITHUB_REPOSITORY/kaniko-executor:$IMAGE_TAG"
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login $TARGET_REGISTRY -u $ --password-stdin
+          docker pull $SOURCE_IMAGE
+          docker tag $SOURCE_IMAGE $TARGET_IMAGE
+          docker push $TARGET_IMAGE
