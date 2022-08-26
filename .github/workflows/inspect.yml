@@ -1,0 +1,10 @@
+name: Inspect container image
+on: workflow_dispatch
+jobs:
+  inspect-image:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Inspect image
+        run: |
+          docker pull gcr.io/kaniko-project/executor:v1.8.1 >/dev/null
+          docker images --digests|grep kaniko
