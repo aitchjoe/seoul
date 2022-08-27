@@ -23,34 +23,15 @@ on:
         - linux/amd64
         - all
 
-env:
-  CRANE_TGZ: https://github.com/google/go-containerregistry/releases/download/v0.11.0/go-containerregistry_Linux_x86_64.tar.gz
-
 jobs:
   mirror-image:
 
     # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
     runs-on: ubuntu-22.04
 
-    # https://docs.github.com/en/actions/using-jobs/running-jobs-in-a-container
-    #
-    # container:
-    #  image: gcr.io/go-containerregistry/crane:v0.11.0
-    #  options: --entrypoint ""
-    #
-    # 参考 [Using with GitLab](https://github.com/google/go-containerregistry/tree/v0.11.0/cmd/crane#using-with-gitlab) 使用以上配置，但 `entrypoint` 未生效仍是默认的 `--entrypoint "tail"`，从而出错（当然大部分容器都会带 `tail`）：
-    # 
-    # ```
-    # /usr/bin/docker create ...... --entrypoint "" ...... --entrypoint "tail" gcr.io/go-containerregistry/crane:v0.11.0 "-f" "/dev/null"
-    #
-    # Error response from daemon: failed to create shim: OCI runtime create failed: container_linux.go:380: starting container process caused: exec: "tail": executable file not found in $PATH: unknown
-    # ```
-    #
-    # 在 [Docker's entrypoint its not been executing when a pipeline starts](https://github.com/actions/runner/issues/1964) 有提及：
-    #
-    # > Right now, you cannot overwrite the entrypoint by providing it as an argument, since an additional argument will be added by default specifying --entrypoint "tail" and arguments -f /dev/null.
-    #
-    # 因此直接使用之下的 `wget` 获取 crane。
+    # 参见 README 中 Running crane in a container 一节的说明。
+    container:
+      image: gcr.io/go-containerregistry/crane:debug
 
     steps:
       - name: Mirror image
@@ -74,6 +55,5 @@ jobs:
             echo 暂时只支持发布至本项目内（ghcr.io/$GITHUB_REPOSITORY）或 docker.io/aitchjoe
             exit 1
           fi
-          wget -q -c $CRANE_TGZ -O - | tar -xz -C /tmp && shopt -s expand_aliases && alias crane=/tmp/crane
           crane auth login -u $U -p $P $TARGET_REGISTRY
           crane cp $SOURCE_IMAGE $TARGET_IMAGE --platform $TARGET_IMAGE_PLATFORM

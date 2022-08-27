@@ -51,7 +51,7 @@ jobs:
    * 目标制品平台：大多数场景用默认的 `linux/amd64` 即可，如果选择 `all` 也取决于源制品支持多少平台。
 1. 点击 Run workflow 按钮运行，稍等或刷新该页面即可显示新增的 workflow run，点击进入查看日志。
 
-外部用户可以 [Fork](https://github.com/aitchjoe/seoul/fork) 后在自己的项目进行，由于配置脚本相对简单、所使用的都是官方功能或大厂工具（crane），因此可以相对容易的判断是否由安全隐患。
+外部用户可以 [Fork](https://github.com/aitchjoe/seoul/fork) 后在自己的项目进行，由于配置脚本相对简单、所使用的都是官方功能或大厂工具（crane），因此可以相对容易的判断是否有安全隐患。
 
 ### 用户使用
 
@@ -63,8 +63,8 @@ jobs:
 
 再按照以下方式使用镜像：
 
-* `ghcr.io/aitchjoe/seoul/kaniko-executor:v1.8.1@sha256:b44b0744b450e731b5a5213058792cd8d3a6a14c119cf6b1f143704f22a7c650`
-* 如果容器运行时不支持以上格式则：`ghcr.io/aitchjoe/seoul/kaniko-executor@sha256:b44b0744b450e731b5a5213058792cd8d3a6a14c119cf6b1f143704f22a7c650`
+* 同时带 Tag 及 SHA：`ghcr.io/aitchjoe/seoul/kaniko-executor:v1.8.1@sha256:b44b0744b450e731b5a5213058792cd8d3a6a14c119cf6b1f143704f22a7c650`
+* 如果容器运行时不支持以上格式则只带 SHA：`ghcr.io/aitchjoe/seoul/kaniko-executor@sha256:b44b0744b450e731b5a5213058792cd8d3a6a14c119cf6b1f143704f22a7c650`
 
 ## 技术细节
 
@@ -110,4 +110,47 @@ v1.8.0@new-sha256 found
 
 而镜像保持和源制品相同的 SHA 能提升一定的安全性，参见之上的[用户使用](#用户使用)一节。另外使用 `crane cp` 还可以同时创建多平台版本，从 [kaniko-executor](https://github.com/aitchjoe/seoul/pkgs/container/seoul%2Fkaniko-executor) 制品的 OS / Arch  栏可以发现只有 crane 生成的 v1.8.1 才有多个版本，当然这对我们现在的场景帮助不大。
 
+### Running crane in a container
 
+当参考 [Running jobs in a container](https://docs.github.com/en/actions/using-jobs/running-jobs-in-a-container) 及 crane 的 [Using with GitLab](https://github.com/google/go-containerregistry/tree/v0.11.0/cmd/crane#using-with-gitlab)，配置如下：
+
+```
+    container:
+      image: gcr.io/go-containerregistry/crane:v0.11.0
+      options: --entrypoint ""
+```
+
+但发现以上 `entrypoint` 并未生效，仍是默认的 `--entrypoint "tail"` 导致出错：
+
+```
+/usr/bin/docker create ...... --entrypoint "" ...... --entrypoint "tail" gcr.io/go-containerregistry/crane:v0.11.0 "-f" "/dev/null"
+
+Error response from daemon: failed to create shim: OCI runtime create failed: container_linux.go:380: starting container process caused: exec: "tail": executable file not found in $PATH: unknown
+```
+
+在 [Docker's entrypoint its not been executing when a pipeline starts](https://github.com/actions/runner/issues/1964) 有提及：
+
+> Right now, you cannot overwrite the entrypoint by providing it as an argument, since an additional argument will be added by default specifying --entrypoint "tail" and arguments -f /dev/null.
+
+但即使解决了 `entrypoint` 问题仍会出现以下错误（在 [GitLab CI](https://gitlab.com/aitchjoe/seoul) 验证）：
+
+```
+ERROR: Job failed (system failure): Error response from daemon: OCI runtime create failed: container_linux.go:380: starting container process caused: exec: "sh": executable file not found in $PATH: unknown (exec.go:73:0s)
+```
+
+因此只能使用 `gcr.io/go-containerregistry/crane:debug`，但是 crane 和 kaniko 又不一样，后者的 Tag 类似 `v1.8.1-debug` 也就是说有每一个 Release 对应的 Debug 版本，但 crane 的 debug 类似于 latest 会不断更新变化，这在 CI 的场景实际是一个反模式，但考虑到 crane 的功能很单纯，勉强也可以接受。
+
+另外在我们之前直接使用 crane 二进制文件的做法除了不够声明式以外也很简单：
+
+```
+    steps:
+      - name: Mirror image
+        env:
+          CRANE_TGZ: https://github.com/google/go-containerregistry/releases/download/v0.11.0/go-containerregistry_Linux_x86_64.tar.gz
+          ......
+        run: |
+          ......
+          wget -q -c $CRANE_TGZ -O - | tar -xz -C /tmp && shopt -s expand_aliases && alias crane=/tmp/crane
+          crane auth login -u $U -p $P $TARGET_REGISTRY
+          crane cp $SOURCE_IMAGE $TARGET_IMAGE --platform $TARGET_IMAGE_PLATFORM
+```
