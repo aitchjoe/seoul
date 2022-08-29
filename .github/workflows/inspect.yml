@@ -1,10 +1,27 @@
 name: Inspect container image
-on: workflow_dispatch
+
+on:
+  workflow_dispatch:
+    inputs:
+      image:
+        description: '容器制品名称（包含域名及 Tag）'
+        required: true
+        default: 'gcr.io/kaniko-project/executor:v1.8.1' 
+
 jobs:
   inspect-image:
     runs-on: ubuntu-22.04
+    container:
+      image: gcr.io/go-containerregistry/crane:debug
     steps:
       - name: Inspect image
+        env:
+          IMAGE: ${{ inputs.image }}
         run: |
-          docker pull gcr.io/kaniko-project/executor:v1.8.1 >/dev/null
-          docker images --digests|grep kaniko
+          echo $IMAGE
+
+          # 以下两个命令并不是显示该 Tag 所有平台的 SHA，如果只有一个平台则相同、否则是一个和所有平台 SHA 都不同的值。
+          # crane digest $IMAGE
+          # crane digest $IMAGE --platform all
+          
+          echo -e "\tlinux/amd64: $(crane digest $IMAGE --platform linux/amd64)"

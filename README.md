@@ -59,12 +59,12 @@ jobs:
 
 从**其他可信渠道**获取官方容器制品相应版本的 SHA，一个笨办法就是自己运行 GitHub Actions 如 [inspect.yml](.github/workflows/inspect.yml)，然后从 Job 输出中确认如：
 
-* `gcr.io/kaniko-project/executor:v1.8.1` 的 SHA：`sha256:b44b0744b450e731b5a5213058792cd8d3a6a14c119cf6b1f143704f22a7c650`
+* `gcr.io/kaniko-project/executor:v1.8.1` 的 `linux/amd64` 平台（我们最常用的平台）对应版本的 SHA：`sha256:07ccf302c19ddd6f83c4dd21109833b7d16b5621b241d022442f11dfa0414d76`
 
 再按照以下方式使用镜像：
 
-* 同时带 Tag 及 SHA：`ghcr.io/aitchjoe/seoul/kaniko-executor:v1.8.1@sha256:b44b0744b450e731b5a5213058792cd8d3a6a14c119cf6b1f143704f22a7c650`
-* 如果容器运行时不支持以上格式则只带 SHA：`ghcr.io/aitchjoe/seoul/kaniko-executor@sha256:b44b0744b450e731b5a5213058792cd8d3a6a14c119cf6b1f143704f22a7c650`
+* 同时带 Tag 及 SHA：`ghcr.io/aitchjoe/seoul/kaniko-executor:v1.8.1@sha256:07ccf302c19ddd6f83c4dd21109833b7d16b5621b241d022442f11dfa0414d76`
+* 如果容器运行时不支持以上格式则只带 SHA：`ghcr.io/aitchjoe/seoul/kaniko-executor@sha256:07ccf302c19ddd6f83c4dd21109833b7d16b5621b241d022442f11dfa0414d76`
 
 ## 技术细节
 
