@@ -1,0 +1,55 @@
+name: Mirror container image 2
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_repository:
+        description: '源制品名称（包含域名及 Tag）'
+        required: true
+        default: 'gcr.io/kaniko-project/executor:v1.7.0'         
+      target_repository:
+        description: '目标制品名称（包含域名及 Tag，暂时只支持发布到本项目内及 `docker.io/aitchjoe`）'
+        required: true 
+      target_image_platform:
+        description: '目标制品平台'
+        required: true
+        type: choice
+        default: 'linux/amd64' 
+        options:
+        - linux/amd64
+        - all
+
+jobs:
+  mirror-image:
+
+    # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idruns-on
+    runs-on: ubuntu-22.04
+
+    # 参见 README 中 Running crane in a container 一节的说明。
+    container:
+      image: gcr.io/go-containerregistry/crane:debug
+
+    steps:
+      - name: Mirror image
+
+        # https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#using-an-intermediate-environment-variable
+        env:
+          SOURCE_IMAGE: ${{ inputs.source_repository }}
+          TARGET_IMAGE: ${{ inputs.target_repository }}
+          TARGET_IMAGE_PLATFORM: ${{ inputs.target_image_platform }}
+
+        run: |
+          TARGET_REGISTRY=$(echo "$TARGET_IMAGE" | awk -F/ '{print $1}')
+          if [[ $TARGET_IMAGE == ghcr.io/$GITHUB_REPOSITORY/* ]]; then
+            U=anyname
+            P=${{ secrets.GITHUB_TOKEN }}
+          elif [[ $TARGET_IMAGE == docker.io/aitchjoe/* ]]; then
+            # 如果 `U=` 也引用 `secrets.DOCKERHUB_USERNAME`（值为 `aitchjoe`）则日志中的 `aitchjoe` 也会全变为星号。
+            U=aitchjoe
+            P=${{ secrets.DOCKERHUB_TOKEN }}
+          else
+            echo 暂时只支持发布至本项目内（ghcr.io/$GITHUB_REPOSITORY）或 docker.io/aitchjoe
+            exit 1
+          fi
+          crane auth login -u $U -p $P $TARGET_REGISTRY
+          crane cp $SOURCE_IMAGE $TARGET_IMAGE --platform $TARGET_IMAGE_PLATFORM
