@@ -6,10 +6,11 @@ on:
       source_repository:
         description: '源制品名称（包含域名、不含 Tag）'
         required: true
-        default: 'gcr.io/kaniko-project/executor' 
+        default: 'docker.io/...' 
       target_repository:
         description: '目标制品名称（包含域名、不含 Tag，暂时只支持发布到本项目内及 `docker.io/aitchjoe`）'
         required: true
+        default: 'ghcr.io/aitchjoe/seoul/...'
       image_tag:
         description: '源和目标制品 Tag'
         required: true
