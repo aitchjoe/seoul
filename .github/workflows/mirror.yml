@@ -52,8 +52,8 @@ jobs:
             # 如果 `U=` 也引用 `secrets.DOCKERHUB_USERNAME`（值为 `aitchjoe`）则日志中的 `aitchjoe` 也会全变为星号。
             U=aitchjoe
             P=${{ secrets.DOCKERHUB_TOKEN }}
-          elif [[ $TARGET_IMAGE == quay.io/aitchjoe2020/* ]]; then
-            U=aitchjoe2020+mirror
+          elif [[ $TARGET_IMAGE == quay.io/* ]]; then
+            U=${{ secrets.QUAY_USERNAME }}
             P=${{ secrets.QUAY_TOKEN }}
           else
             echo 暂时只支持发布至本项目内（ghcr.io/$GITHUB_REPOSITORY）或 docker.io/aitchjoe
